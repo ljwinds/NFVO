@@ -1,0 +1,44 @@
+﻿.topology_tab
+{
+    float:left;
+}
+
+.topology_canvas
+{
+    float:left;
+    margin-left:20px;
+    width:80%;
+}
+
+.topology_head
+{
+    float:left;
+    width:70%;
+}
+
+.topology_head h2
+{
+    float:left;
+    width:60%;
+}
+
+#topology_create_edge, #topology_submit
+{
+    float:left;
+    margin-top:20px;
+    margin-left:20px;
+}
+
+.topology_network_canvas
+{
+    float:left;
+    width:70%;
+    height:500px;
+}
+
+#topology_form
+{
+    float:left;
+    width:25%;
+    margin-left:20px;
+}

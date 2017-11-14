@@ -1,0 +1,347 @@
+﻿@using NFVO.Models;
+
+@model NetworkRouterPortsModels
+
+@{
+    ViewBag.Title = "首页";
+}
+
+<script src="~/Scripts/jquery-1.10.2.min.js"></script>
+<script src="~/Scripts/qunee-min.js"></script>
+<script src="~/Scripts/mynfvo.js"></script>
+
+<link rel="stylesheet" type="text/css" href="~/Content/mynfvo.css" />
+
+<div class="topology_tab">
+    <ul class="nav nav-pills nav-stacked">
+        <li class="active" id="topology_tab_network">
+            <a href="#">网络拓扑</a>
+            <ul id="topology_tab_network_ul" class="nav nav-stacked">
+                <li><img width="70" height="50" src="~/Content/images/network.png" draggable="true" ondragstart="dragNetwork(event)"></li>
+                <li><img width="70" height="50" src="~/Content/images/router.png" draggable="true" ondragstart="dragRouter(event)"></li>
+            </ul>
+        </li>
+        <li class="active" id="topology_tab_nfvo">
+            <a href="#">网络功能虚拟化编排</a>
+            <ul id="topology_tab_nfvo_ul" class="nav nav-stacked">
+                <li><img width="70" height="50" src="~/Content/images/network.png" draggable="true" ondragstart="dragNetwork(event)"></li>
+                <li><a href="#ios" data-toggle="tab">iOS</a></li>
+                <li><a href="#ios" data-toggle="tab">iOS</a></li>
+            </ul>
+        </li>
+    </ul>
+</div>
+
+<div class="topology_canvas">
+    <div class="topology_head">
+        <h2>当前网络拓扑图</h2>
+        <button id="topology_create_edge" type="button" class="btn btn-default">创建连线</button>
+        <button id="topology_submit" type="button" class="btn btn-default">提交拓扑图</button>
+    </div>
+    <div class="topology_network_canvas" id="topology_network_canvas" ondrop="drop(event)" ondragover="allowDrop(event)" />
+</div>
+
+<div id="topology_form"></div>
+
+
+<script type="text/javascript">
+    var graph = new Q.Graph("topology_network_canvas");
+    var networks = new Array();
+    var edges = new Array();
+    var routers = new Array();
+
+    graph.onElementCreated = function (element, evt, dragInfo) {
+        Q.Graph.prototype.onElementCreated.call(this, element, evt, dragInfo);
+        if (element instanceof Q.Edge) {
+            element.setStyle(Q.Styles.ARROW_TO, false);
+            element.name = "";
+            element.topology_is_new = true;
+            layouter.start();
+
+            edges.push(element);
+
+            return;
+        }
+    }
+
+    // 遍历网络以及其包含的子网，存入networks中
+    @foreach (NetworkModels network in Model.Networks)
+    {
+        <text>
+        var network_node = graph.createNode("@(network.Name)", 0, 0);
+        network_node.image = Q.Graphs.cloud;
+        network_node.topology_type = "network";
+        network_node.topology_id = "@(network.ID)";
+        network_node.topology_is_shared = "@(network.Shared)";
+        network_node.topology_is_new = false;
+        </text>
+        foreach (SubnetModels subnet in (List<SubnetModels>)Model.NetworkSubnets[network])
+        {
+            <text>
+            network_node.topology_subnets = new Array();
+            network_node.topology_subnets.push({ cidr: "@(subnet.CIDR)", gateway_ip: "@(subnet.GatewayIP)" });
+            </text>
+        }
+        <text>
+        networks.push(network_node);
+        </text>
+    }
+
+    // 遍历路由器以及其包含的接口，存入routers中
+    @foreach (RouterModels router in Model.RouterPorts.Keys)
+    {
+        <text>
+        var router_node = graph.createNode("@(router.Name)", 0, 0);
+        router_node.image = Q.Graphs.exchanger2;
+        router_node.topology_type = "router";
+        router_node.topology_is_snat = ("@(router.ExternalGatewayInfo.EnableSNAT)")
+        router_node.topology_is_new = false;
+        routers.push(router_node);
+        </text>
+        foreach (PortModels port in (List<PortModels>)Model.RouterPorts[router])
+        {
+            <text>
+            for (var i in networks) {
+                if ("@(port.NetworkID)" == networks[i].topology_id) {
+                    var edge = graph.createEdge("", networks[i], router_node);
+                    edge.setStyle(Q.Styles.ARROW_TO, false);
+                    edge.topology_is_new = false;
+                    edges.push(edge);
+                }
+            }
+            </text>
+        }
+    }
+
+    // 设置画布布局为弹性布局
+    var layouter = new Q.SpringLayouter(graph);
+    layouter.repulsion = 90;
+    layouter.attractive = 0.5;
+    layouter.elastic = 5;
+    layouter.start();
+
+    // 移动图元时重新调整布局
+    graph.interactionDispatcher.addListener(function (evt) {
+        if (evt.kind == Q.InteractionEvent.ELEMENT_MOVING) {
+            layouter.start();
+        }
+    })
+
+    function allowDrop(ev) {
+        ev.preventDefault();
+    }
+
+    function dragNetwork(ev) {
+        ev.dataTransfer.setData("Text", "network");
+    }
+
+    function dragRouter(ev) {
+        ev.dataTransfer.setData("Text", "router");
+    }
+
+    // 图元拖拽至画布时创建相应的节点
+    function drop(ev) {
+        ev.preventDefault();
+        var data = ev.dataTransfer.getData("Text");
+        var node = graph.createNode("", 0, 0);
+
+        if (data == "network") {
+            node.image = Q.Graphs.cloud;
+            node.topology_type = "network";
+            node.topology_is_new = true;
+        }
+
+        if (data == "router") {
+            node.image = Q.Graphs.exchanger2;
+            node.topology_type = "router";
+            node.topology_is_new = true;
+        }
+
+        layouter.start();
+    }
+
+    // 点击“创建连线”按钮时改变交互方式
+    $("#topology_create_edge").click(function () {
+        if (graph.interactionMode == Q.Consts.INTERACTION_MODE_CREATE_SIMPLE_EDGE) {
+            graph.interactionMode = Q.Consts.INTERACTION_MODE_DEFAULT;
+        }
+        else {
+            graph.interactionMode = Q.Consts.INTERACTION_MODE_CREATE_SIMPLE_EDGE;
+        }
+    });
+
+    // 获取图元的选择事件
+    graph.selectionChangeDispatcher.addListener(function (evt) {
+        // 选择的图元为节点时
+        if (evt.data instanceof Q.Node) {
+
+            $("#topology_form").show();
+
+            // 节点类型为网络
+            if (evt.data.topology_type == "network") {
+
+                createNetworkForm();
+
+                $("#NetworkName").val(evt.data.name);
+                if (evt.data.topology_subnets != null) {
+                    $("#NetworkAddress").val(evt.data.topology_subnets[0].cidr);
+                    $("#GatewayIP").val(evt.data.topology_subnets[0].gateway_ip);
+                }
+
+                if (evt.data.topology_is_shared == "True") {
+                    $("#IsShared").prop("checked", true);
+                }
+                else {
+                    $("#IsShared").prop("checked", false);
+                }
+
+                // 节点是已有的节点，不允许修改值
+                if (evt.data.topology_is_new == false) {
+                    $("#NetworkName").attr("disabled", true);
+                    $("#NetworkAddress").attr("disabled", true);
+                    $("#GatewayIP").attr("disabled", true);
+                    $("#IsShared").attr("disabled", true);
+                    $("#SaveNetwork").attr("disabled", true);
+                }
+                // 节点是新添加的节点，清空值和框
+                else {
+                    $("#NetworkName").attr("disabled", false);
+                    $("#NetworkAddress").attr("disabled", false);
+                    $("#GatewayIP").attr("disabled", false);
+                    $("#IsShared").attr("disabled", false);
+                    $("#SaveNetwork").attr("disabled", false);
+
+                    // 点击网络节点的属性列表的“保存”按钮
+                    $("#SaveNetwork").click(function () {
+                        evt.data.name = $("#NetworkName").val();
+                        evt.data.topology_subnets = new Array();
+                        evt.data.topology_subnets.push({ cidr: $("#NetworkAddress").val(), gateway_ip: $("#GatewayIP").val() });
+                        evt.data.topology_is_shared = ($("#IsShared").prop("checked") ? "True" : "False");
+                        evt.data.checkboxval = $("#IsShared").prop("checked");
+
+                        networks.push(evt.data);
+                        // console.log(evt);
+                    });
+                }
+            }
+            // 节点类型为路由器
+            else if (evt.data.topology_type == "router") {
+
+                createRouterForm();
+
+                $("#RouterName").val(evt.data.name);
+
+                if (evt.data.topology_is_snat == "True") {
+                    $("#IsSNAT").prop("checked", true);
+                }
+                else {
+                    $("#IsSNAT").prop("checked", false);
+                }
+
+                // 节点是已有的节点，不允许修改值
+                if (evt.data.topology_is_new == false) {
+                    $("#RouterName").attr("disabled", true);
+                    $("#IsSNAT").attr("disabled", true);
+                    $("#SaveRouter").attr("disabled", true);
+                }
+                // 节点是新添加的节点，清空值和框
+                else {
+                    $("#RouterName").attr("disabled", false);
+                    $("#IsSNAT").attr("disabled", false);
+                    $("#SaveRouter").attr("disabled", false);
+
+                    $("#SaveRouter").click(function () {
+                        evt.data.name = $("#RouterName").val();
+                        evt.data.topology_is_snat = ($("#IsSNAT").prop("checked") ? "True" : "False");
+                        evt.data.checkboxval = $("#IsSNAT").prop("checked");
+
+                        routers.push(evt.data);
+
+                        // console.log(evt);
+                    });
+                }
+
+            }
+        }
+        // 选择的图元为边时
+        else if (evt.data instanceof Q.Edge) {
+            $("#topology_form").hide();
+        }
+    });
+
+    // 点击“提交拓扑图”按钮时将数据传回Controller
+    $("#topology_submit").click(function () {
+        // var json_obj = { SubnetID: "aa", IPAddress: "bb" };
+        var json_obj = constructModel();
+        console.log(json_obj);
+        var json_str = JSON.stringify(json_obj);
+        console.log(json_str);
+        $.ajax({
+            url: "/Networks/CreateNetwork",
+            type: "POST",
+            dataType: "json",
+            data: json_str,
+            contentType: "application/json; charset=utf-8",
+            success: function (data) {
+                console.log(data);
+            }
+        });
+    });
+
+    function createNetworkForm() {
+        $("#topology_form").html('<form class="form-horizontal">        <div class="form-group">            <label for="inputEmail3" class="control-label">网络名称</label>            <div>                <input type="text" class="form-control" id="NetworkName" placeholder="网络名称">            </div>        </div>        <div class="form-group">            <label for="inputPassword3" class="control-label">网络地址</label>            <div>                <input type="text" class="form-control" id="NetworkAddress" placeholder="CIDR格式的地址，如10.10.10.0/24">            </div>        </div>        <div class="form-group">            <label for="inputGatewayIP" class="control-label">网关IP</label>            <div>                <input type="text" class="form-control" id="GatewayIP" placeholder="默认是网络地址的第一个IP">            </div>        </div>        <div class="form-group">            <div>                <div class="checkbox">                    <label>                        <input type="checkbox" id="IsShared">共享网络                    </label>                </div>            </div>        </div>        <div class="form-group">            <div>                <button type="submit" class="btn btn-default" id="SaveNetwork">保存</button>            </div>        </div>    </form>');
+    }
+
+    function createRouterForm() {
+        $("#topology_form").html('<form class="form-horizontal">                <div class="form-group">                    <label for="inputEmail3" class="control-label">路由器名称</label>                    <div>                        <input type="text" class="form-control" id="RouterName" placeholder="路由器名称">                    </div>                </div>                <div class="form-group">                    <div>                        <div class="checkbox">                            <label>                                <input type="checkbox" id="IsSNAT"> 开启 SNAT                            </label>                        </div>                    </div>                </div>                <div class="form-group">                    <div>                        <button type="submit" class="btn btn-default" id="SaveRouter">保存</button>                    </div>                </div>            </form>');
+    }
+
+    function constructModel() {
+        var new_networks = new Array();
+        for (var i in networks) {
+            if (networks[i].topology_is_new) {
+                var obj = new Object();
+                obj.name = networks[i].name;
+                obj.topology_is_shared = networks[i].topology_is_shared;
+                obj.topology_subnets = new Array();
+                for (var j in networks[i].topology_subnets) {
+                    obj.topology_subnets.push({ cidr: networks[i].topology_subnets[j].cidr, gateway_ip: networks[i].topology_subnets[j].gateway_ip });
+                }
+
+                new_networks.push(obj);
+            }
+        }
+
+        var new_routers = new Array();
+        for (var i in routers) {
+            if (routers[i].topology_is_new) {
+                var obj = new Object();
+                obj.name = routers[i].name;
+                obj.topology_is_snat = routers[i].topology_is_snat;
+
+                new_routers.push(obj);
+            }
+        }
+
+        var new_edges = new Array();
+        for (var i in edges) {
+            if (edges[i].topology_is_new) {
+                var obj = new Object();
+                if (edges[i].from.topology_type == "router") {
+                    obj.router_name = edges[i].from.name;
+                    obj.network_name = edges[i].to.name;
+                }
+                else {
+                    obj.router_name = edges[i].to.name;
+                    obj.network_name = edges[i].from.name;
+                }
+                new_edges.push(obj);
+            }
+        }
+
+        var json = { networks: new_networks, routers: new_routers, router_ports: new_edges };
+        return json;
+    }
+
+</script>
+
