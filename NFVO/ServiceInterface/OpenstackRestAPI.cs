@@ -36,6 +36,33 @@ namespace NFVO.ServiceInterface
             this.Token = k.GetToken();
         }
 
+        public List<NetworkModels> ParseNetworkJson(JObject obj)
+        {
+            List<NetworkModels> networks = new List<NetworkModels>();
+
+            foreach (var network in obj["networks"])
+            {
+                NetworkModels temp = new NetworkModels();
+                temp.ProviderPhysicalNetwork = network["provider:physical_network"].ToString();
+                temp.ID = network["id"].ToString();
+                temp.ProviderNetworkType = network["provider:network_type"].ToString();
+                temp.ProjectID = network["project_id"].ToString();
+                temp.RouterExternal = network["shared"].ToString();
+                temp.Shared = network["router:external"].ToString();
+                temp.Name = network["name"].ToString();
+
+                temp.Subnets = new List<String>();
+                foreach (var subnet in network["subnets"])
+                {
+                    temp.Subnets.Add(subnet.ToString());
+                }
+
+                networks.Add(temp);
+            }
+
+            return networks;
+        }
+
         // 获取当前所有的网络
         public List<NetworkModels> ListNetworks()
         {
@@ -51,29 +78,7 @@ namespace NFVO.ServiceInterface
                 String value = reader.ReadToEnd();
                 JObject obj = (JObject)JsonConvert.DeserializeObject(value);
 
-                List<NetworkModels> networks = new List<NetworkModels>();
-
-                foreach (var network in obj["networks"])
-                {
-                    NetworkModels temp = new NetworkModels();
-                    temp.ProviderPhysicalNetwork = network["provider:physical_network"].ToString();
-                    temp.ID = network["id"].ToString();
-                    temp.ProviderNetworkType = network["provider:network_type"].ToString();
-                    temp.ProjectID = network["project_id"].ToString();
-                    temp.RouterExternal = network["shared"].ToString();
-                    temp.Shared = network["router:external"].ToString();
-                    temp.Name = network["name"].ToString();
-
-                    temp.Subnets = new List<String>();
-                    foreach (var subnet in network["subnets"])
-                    {
-                        temp.Subnets.Add(subnet.ToString());
-                    }
-
-                    networks.Add(temp);
-                }
-
-                return networks;
+                return ParseNetworkJson(obj);
             }
         }
 

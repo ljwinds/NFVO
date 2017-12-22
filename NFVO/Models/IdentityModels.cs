@@ -3,6 +3,7 @@ using System.Security.Claims;
 using System.Threading.Tasks;
 using Microsoft.AspNet.Identity;
 using Microsoft.AspNet.Identity.EntityFramework;
+using System;
 
 namespace NFVO.Models
 {
@@ -29,5 +30,16 @@ namespace NFVO.Models
         {
             return new ApplicationDbContext();
         }
+    }
+
+    public class NetworkAdministrator
+    {
+        public String ID { get; set; }
+        public String Name { get; set; }
+        public String Password { get; set; }
+        public String Domain { get; set; }
+        public String Project { get; set; }
+        public String Token { get; set; }
+        public String Expires_At { get; set; }
     }
 }
