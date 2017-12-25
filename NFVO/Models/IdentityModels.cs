@@ -32,7 +32,7 @@ namespace NFVO.Models
         }
     }
 
-    public class NetworkAdministrator
+    public class User
     {
         public String ID { get; set; }
         public String Name { get; set; }
