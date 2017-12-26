@@ -12,7 +12,7 @@ using NFVO.Models;
 
 namespace NFVO.Controllers
 {
-    [Authorize]
+    //[Authorize]
     public class AccountController : Controller
     {
         private ApplicationSignInManager _signInManager;
@@ -54,16 +54,23 @@ namespace NFVO.Controllers
 
         //
         // GET: /Account/Login
-        [AllowAnonymous]
-        public ActionResult Login(string returnUrl)
+        // [AllowAnonymous]
+        public ActionResult Login()
         {
-            ViewBag.ReturnUrl = returnUrl;
+            //ViewBag.ReturnUrl = returnUrl;
             return View();
+        }
+
+        // POST: /Account/Login
+        [HttpPost]
+        public ActionResult Login(string id)
+        {
+            return RedirectToAction("Index", "Networks");
         }
 
         //
         // POST: /Account/Login
-        [HttpPost]
+        /* [HttpPost]
         [AllowAnonymous]
         [ValidateAntiForgeryToken]
         public async Task<ActionResult> Login(LoginViewModel model, string returnUrl)
@@ -89,7 +96,7 @@ namespace NFVO.Controllers
                     ModelState.AddModelError("", "无效的登录尝试。");
                     return View(model);
             }
-        }
+        }*/
 
         //
         // GET: /Account/VerifyCode

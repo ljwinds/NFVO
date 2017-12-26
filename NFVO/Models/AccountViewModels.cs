@@ -48,21 +48,21 @@ namespace NFVO.Models
 
     public class LoginViewModel
     {
-        [Required]
-        [Display(Name = "域名")]
+        //[Required]
+        //[Display(Name = "域名")]
         public string Domain { get; set; }
 
-        [Required]
-        [Display(Name = "用户名")]
+        //[Required]
+        //[Display(Name = "用户名")]
         public string Name { get; set; }
 
-        [Required]
-        [DataType(DataType.Password)]
-        [Display(Name = "密码")]
+        //[Required]
+        //[DataType(DataType.Password)]
+        //[Display(Name = "密码")]
         public string Password { get; set; }
 
-        [Display(Name = "记住登录状态")]
-        public bool RememberLoginState { get; set; }
+        //[Display(Name = "记住登录状态")]
+        //public bool RememberLoginState { get; set; }
     }
 
     public class RegisterViewModel
