@@ -172,6 +172,7 @@
     <Compile Include="Controllers\HomeController.cs" />
     <Compile Include="Controllers\ManageController.cs" />
     <Compile Include="Controllers\NetworksController.cs" />
+    <Compile Include="Controllers\NFVController.cs" />
     <Compile Include="Global.asax.cs">
       <DependentUpon>Global.asax</DependentUpon>
     </Compile>
@@ -400,6 +401,7 @@
     <Folder Include="Content\dist\" />
     <Folder Include="Content\vendor\" />
     <Folder Include="Scripts\dist\" />
+    <Folder Include="Views\NFV\" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="fonts\glyphicons-halflings-regular.woff" />
